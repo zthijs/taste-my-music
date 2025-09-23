@@ -1,0 +1,1 @@
+ALTER TABLE `music_profile` ADD `styleSentence` text;
