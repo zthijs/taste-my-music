@@ -7,11 +7,24 @@
 		CardTitle
 	} from '$lib/components/ui/card';
 	import { Avatar, AvatarFallback, AvatarImage } from '$lib/components/ui/avatar';
+	import { Button } from '$lib/components/ui/button';
+	import {
+		AlertDialog,
+		AlertDialogHeader,
+		AlertDialogFooter,
+		AlertDialogTitle,
+		AlertDialogDescription
+	} from '$lib/components/ui/alert-dialog';
 	import PageHeader from '$lib/components/page-header.svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import TrashIcon from '@tabler/icons-svelte/icons/trash';
+	import { enhance } from '$app/forms';
 
 	let { data } = $props();
+
+	let showDeleteDialog = $state(false);
+	let isDeleting = $state(false);
 
 	function formatDate(date: string | Date | undefined): string {
 		if (!date) return 'N/A';
@@ -119,6 +132,36 @@
 				</CardContent>
 			</Card>
 		</div>
+
+		<!-- Danger Zone -->
+		<div in:fly={{ y: 20, duration: 500, delay: 200, easing: cubicOut }}>
+			<Card class="border-destructive/50">
+				<CardHeader>
+					<CardTitle class="text-destructive">Danger Zone</CardTitle>
+					<CardDescription>Permanently delete your account and all associated data</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+						<div class="space-y-1">
+							<p class="text-sm font-medium">Delete Account</p>
+							<p class="text-sm text-muted-foreground">
+								This action cannot be undone. All your data including music profiles,
+								recommendations, and listening history will be permanently deleted.
+							</p>
+						</div>
+						<Button
+							variant="destructive"
+							onclick={() => (showDeleteDialog = true)}
+							disabled={isDeleting}
+							class="shrink-0"
+						>
+							<TrashIcon class="size-4" />
+							Delete Account
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
+		</div>
 	{:else}
 		<div in:fade={{ duration: 300 }}>
 			<Card class="border-destructive">
@@ -129,3 +172,42 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Delete Confirmation Dialog -->
+<AlertDialog bind:open={showDeleteDialog}>
+	<AlertDialogHeader>
+		<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+		<AlertDialogDescription>
+			This action cannot be undone. This will permanently delete your account and remove all your
+			data from our servers, including:
+		</AlertDialogDescription>
+	</AlertDialogHeader>
+
+	<ul class="list-disc list-inside text-sm text-muted-foreground space-y-1 my-4">
+		<li>Music profile and taste analysis</li>
+		<li>Listening history and preferences</li>
+		<li>Artist recommendations</li>
+		<li>All connected accounts</li>
+	</ul>
+
+	<AlertDialogFooter>
+		<Button variant="outline" onclick={() => (showDeleteDialog = false)} disabled={isDeleting}>
+			Cancel
+		</Button>
+		<form
+			method="POST"
+			action="?/deleteAccount"
+			use:enhance={() => {
+				isDeleting = true;
+				return async ({ update }) => {
+					await update();
+					isDeleting = false;
+				};
+			}}
+		>
+			<Button type="submit" variant="destructive" disabled={isDeleting}>
+				{isDeleting ? 'Deleting...' : 'Delete Account'}
+			</Button>
+		</form>
+	</AlertDialogFooter>
+</AlertDialog>
