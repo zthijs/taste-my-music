@@ -94,7 +94,6 @@ export async function generateRecommendations(session: Session) {
             if (searchResults.length > 0) {
                 const artist = searchResults[0];
 
-                // Skip if artist is in the followed artists list
                 if (followedArtistIds.has(artist.id.toLowerCase())) {
                     continue;
                 }
