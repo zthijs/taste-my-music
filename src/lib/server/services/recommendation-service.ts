@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { musicProfiles, listeningData, artistRecommendations } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { SessionSpotifyClient } from '$lib/spotify';
-import { client as aiClient } from '$lib/ai/client';
+import { getClient as getAiClient } from '$lib/ai/client';
 import { createRecommendationsPrompt } from '$lib/ai/prompts';
 import { AI_CONFIG, SPOTIFY_LIMITS, CACHE_CONFIG } from '$lib/constants';
 import type { Session } from '@auth/sveltekit';
@@ -56,6 +56,7 @@ export async function generateRecommendations(session: Session) {
         followedArtists: followedArtistNames
     });
 
+    const aiClient = getAiClient();
     const completion = await aiClient.chat.completions.create({
         model: AI_CONFIG.MODEL,
         messages: [

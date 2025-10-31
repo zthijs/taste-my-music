@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { musicProfiles, listeningData } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { SessionSpotifyClient } from '$lib/spotify';
-import { client as aiClient } from '$lib/ai/client';
+import { getClient as getAiClient } from '$lib/ai/client';
 import { createMusicProfilePrompt } from '$lib/ai/prompts';
 import { SPOTIFY_LIMITS, AI_CONFIG, TIME_RANGES, CACHE_CONFIG } from '$lib/constants';
 import type { Session } from '@auth/sveltekit';
@@ -131,6 +131,7 @@ export async function analyzeUserProfile(session: Session) {
 
     let completion;
     try {
+        const aiClient = getAiClient();
         completion = await aiClient.chat.completions.create({
             model: AI_CONFIG.MODEL,
             messages: [

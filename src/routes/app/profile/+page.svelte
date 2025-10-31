@@ -158,7 +158,7 @@
 		{/if}
 
 		{#if data.listeningData && data.listeningData.topTracks.length > 0}
-			<Card>
+			<Card class="hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/30">
 				<CardHeader>
 					<CardTitle>Top Tracks</CardTitle>
 					<CardDescription>Your most played songs</CardDescription>

@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { musicProfiles, listeningData } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { client as aiClient } from '$lib/ai/client';
+import { getClient as getAiClient } from '$lib/ai/client';
 import { createStyleSentencePrompt } from '$lib/ai/prompts';
 import { AI_CONFIG } from '$lib/constants';
 import type { Session } from '@auth/sveltekit';
@@ -60,6 +60,7 @@ export async function generateStyleSentence(session: Session, forceRefresh = fal
 
     let completion;
     try {
+        const aiClient = getAiClient();
         completion = await aiClient.chat.completions.create({
             model: AI_CONFIG.MODEL,
             messages: [
