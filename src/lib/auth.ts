@@ -11,7 +11,8 @@ const SPOTIFY_SCOPES = [
     'user-read-recently-played',
     'user-library-read',
     'playlist-read-private',
-    'playlist-read-collaborative'
+    'playlist-read-collaborative',
+    'user-follow-read'
 ].join(',');
 
 export const { handle, signIn, signOut } = SvelteKitAuth({

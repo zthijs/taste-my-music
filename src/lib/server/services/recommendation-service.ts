@@ -44,10 +44,16 @@ export async function generateRecommendations(session: Session) {
     const topArtists = JSON.parse(listening.topArtists);
     const topGenres = JSON.parse(profile.topGenres);
 
+    const spotifyClient = new SessionSpotifyClient(session);
+    const followedArtists = await spotifyClient.getFollowedArtists();
+    const followedArtistNames = followedArtists.map(artist => artist.name);
+    const followedArtistIds = new Set(followedArtists.map(artist => artist.id.toLowerCase()));
+
     const prompt = createRecommendationsPrompt({
         musicProfile: profile.profileText,
         topArtists: topArtists.slice(0, 15),
-        topGenres
+        topGenres,
+        followedArtists: followedArtistNames
     });
 
     const completion = await aiClient.chat.completions.create({
@@ -75,7 +81,6 @@ export async function generateRecommendations(session: Session) {
         throw new Error('Failed to parse recommendations');
     }
 
-    const spotifyClient = new SessionSpotifyClient(session);
     const now = new Date();
 
     await db.delete(artistRecommendations).where(eq(artistRecommendations.userId, userId));
@@ -88,6 +93,11 @@ export async function generateRecommendations(session: Session) {
 
             if (searchResults.length > 0) {
                 const artist = searchResults[0];
+
+                // Skip if artist is in the followed artists list
+                if (followedArtistIds.has(artist.id.toLowerCase())) {
+                    continue;
+                }
 
                 const recommendationData = {
                     id: crypto.randomUUID(),

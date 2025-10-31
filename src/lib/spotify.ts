@@ -147,4 +147,28 @@ export class SessionSpotifyClient {
         const data = await client.getMe();
         return data.body;
     }
+
+    async getFollowedArtists() {
+        const client = await this.getClient();
+        const allArtists: SpotifyApi.ArtistObjectFull[] = [];
+        let after: string | undefined = undefined;
+
+        try {
+            do {
+                const data: any = await client.getFollowedArtists({ limit: 50, after });
+
+                if (data.body.artists.items && data.body.artists.items.length > 0) {
+                    allArtists.push(...data.body.artists.items);
+                    after = data.body.artists.cursors?.after;
+                } else {
+                    break;
+                }
+            } while (after);
+
+            return allArtists;
+        } catch (error) {
+            console.error('Error fetching followed artists:', error);
+            return [];
+        }
+    }
 }

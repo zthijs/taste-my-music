@@ -33,12 +33,17 @@ export function createRecommendationsPrompt(data: {
     musicProfile: string;
     topArtists: Array<{ name: string; genres: string[] }>;
     topGenres: string[];
+    followedArtists?: string[];
 }) {
     const topArtistsText = data.topArtists
         .slice(0, 15)
         .map((a) => a.name)
         .join(', ');
     const topGenresText = data.topGenres.slice(0, 10).join(', ');
+
+    const followedArtistsText = data.followedArtists && data.followedArtists.length > 0
+        ? `\n\nUser's Followed Artists (DO NOT recommend any of these):\n${data.followedArtists.join(', ')}`
+        : '';
 
     return `You are a music recommendation expert. Based on this user's music taste profile and listening history, recommend 10 new artists they would love but might not know yet.
 
@@ -49,14 +54,16 @@ User's Top Artists:
 ${topArtistsText}
 
 User's Top Genres:
-${topGenresText}
+${topGenresText}${followedArtistsText}
 
 Generate 10 artist recommendations that:
 1. Are NOT in their current top artists list
-2. Match their music taste profile
-3. Span a variety within their preferred genres
-4. Include both established and emerging artists
-5. Are specific and searchable on Spotify
+2. Are NOT in their followed artists list (if provided)
+3. Match their music taste profile
+4. Span a variety within their preferred genres
+5. Include both established and emerging artists
+6. Are specific and searchable on Spotify
+7. Are artists the user likely does NOT already know about
 
 For EACH artist, provide:
 - Artist name (exact, searchable name)
@@ -74,7 +81,8 @@ IMPORTANT:
 - Return ONLY valid JSON, no other text
 - Artist names must be exact and searchable on Spotify
 - Make recommendations diverse and interesting
-- Do not recommend artists from their top artists list`;
+- NEVER recommend artists from their top artists or followed artists lists
+- Focus on lesser-known artists that truly expand their musical horizons`;
 }
 
 export function createRecommendationExplanationPrompt(data: {
