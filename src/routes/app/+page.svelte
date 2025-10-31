@@ -11,14 +11,47 @@
 	import DashboardSkeleton from '$lib/components/skeletons/dashboard-skeleton.svelte';
 	import ArtistCard from '$lib/components/artist-card.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
+	import LoadingMessage from '$lib/components/loading-message.svelte';
 	import { enhance } from '$app/forms';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
 
 	let refreshing = $state(false);
 	let refreshingRecs = $state(false);
+	let isPolling = $state(data.isGenerating);
+	let pollCount = $state(0);
+
+	async function checkRecommendationStatus() {
+		try {
+			const response = await fetch('/app/api/recommendations/status');
+			const result = await response.json();
+
+			if (result.hasRecommendations) {
+				isPolling = false;
+				await invalidateAll();
+			} else {
+				pollCount++;
+				if (isPolling && pollCount < 24) {
+					setTimeout(checkRecommendationStatus, 5000);
+				}
+			}
+		} catch (err) {
+			console.error('Failed to check status:', err);
+			if (isPolling && pollCount < 24) {
+				setTimeout(checkRecommendationStatus, 5000);
+			}
+		}
+	}
+
+	onMount(() => {
+		if (isPolling) {
+			checkRecommendationStatus();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -141,7 +174,22 @@
 					</div>
 				</CardHeader>
 				<CardContent>
-					{#if data.recommendations.length > 0}
+					{#if isPolling}
+						<div in:fade={{ duration: 300 }}>
+							<LoadingMessage
+								title="Generating Recommendations"
+								icon="loader"
+								messages={[
+									'Analyzing your music taste...',
+									'Exploring new artists...',
+									'Finding perfect matches...'
+								]}
+							/>
+							<p class="text-sm text-muted-foreground mt-4 text-center">
+								This usually takes 30-60 seconds. The page will automatically update.
+							</p>
+						</div>
+					{:else if data.recommendations.length > 0}
 						<div class="grid gap-4 md:grid-cols-2">
 							{#each data.recommendations as rec, i}
 								<ArtistCard
@@ -166,9 +214,7 @@
 						</div>
 					{:else}
 						<div in:fade={{ duration: 300 }}>
-							<p class="text-muted-foreground italic">
-								Your recommendations are being generated...
-							</p>
+							<p class="text-muted-foreground italic">No recommendations available yet.</p>
 						</div>
 					{/if}
 				</CardContent>

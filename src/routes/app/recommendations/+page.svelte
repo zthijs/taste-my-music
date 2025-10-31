@@ -11,12 +11,17 @@
 	import RecommendationsSkeleton from '$lib/components/skeletons/recommendations-skeleton.svelte';
 	import ArtistCard from '$lib/components/artist-card.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
+	import LoadingMessage from '$lib/components/loading-message.svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
 
 	let searchQuery = $state('');
+	let isPolling = $state(data.isGenerating);
+	let pollCount = $state(0);
 
 	let filteredRecommendations = $derived(
 		searchQuery
@@ -28,6 +33,34 @@
 				)
 			: data.recommendations
 	);
+
+	async function checkStatus() {
+		try {
+			const response = await fetch('/app/api/recommendations/status');
+			const result = await response.json();
+
+			if (result.hasRecommendations) {
+				isPolling = false;
+				await invalidateAll();
+			} else {
+				pollCount++;
+				if (isPolling && pollCount < 24) {
+					setTimeout(checkStatus, 5000);
+				}
+			}
+		} catch (err) {
+			console.error('Failed to check status:', err);
+			if (isPolling && pollCount < 24) {
+				setTimeout(checkStatus, 5000);
+			}
+		}
+	}
+
+	onMount(() => {
+		if (isPolling) {
+			checkStatus();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -48,25 +81,43 @@
 		description="AI-powered music recommendations based on your taste."
 	/>
 
-	{#if data.isInitializing}
+	{#if isPolling}
 		<div in:fade={{ duration: 300 }}>
-			<RecommendationsSkeleton />
+			<Card>
+				<CardHeader>
+					<CardTitle>Generating Your Recommendations</CardTitle>
+					<CardDescription>
+						Your personalized artist recommendations are being created...
+					</CardDescription>
+				</CardHeader>
+				<CardContent class="space-y-4">
+					<LoadingMessage
+						messages={[
+							'Analyzing your music taste...',
+							'Exploring new artists...',
+							'Finding perfect matches...',
+							'Almost there...'
+						]}
+					/>
+					<p class="text-sm text-muted-foreground">
+						This usually takes 30-60 seconds. The page will automatically update when ready.
+					</p>
+				</CardContent>
+			</Card>
 		</div>
 	{:else if data.recommendations.length === 0}
 		<Card>
 			<CardHeader>
-				<CardTitle>Generating Your Recommendations</CardTitle>
-				<CardDescription>
-					Your personalized artist recommendations are being created...
-				</CardDescription>
+				<CardTitle>No Recommendations Yet</CardTitle>
+				<CardDescription>We couldn't generate recommendations at this time.</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<p class="text-sm text-muted-foreground mb-4">
-					This usually takes a few moments. Please refresh the page if you don't see recommendations
-					soon.
+					This might happen if your profile hasn't been analyzed yet. Please visit your profile page
+					first.
 				</p>
-				<a href="/app" data-sveltekit-preload-data="hover">
-					<Button variant="outline">Go to Dashboard</Button>
+				<a href="/app/profile" data-sveltekit-preload-data="hover">
+					<Button variant="outline">Go to Profile</Button>
 				</a>
 			</CardContent>
 		</Card>

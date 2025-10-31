@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getOrCreateRecommendations } from '$lib/server/services/recommendation-service';
+import { getUserRecommendations, startRecommendationGeneration } from '$lib/server/services/recommendation-service';
 
 export const load: PageServerLoad = async ({ parent }) => {
     const { session } = await parent();
@@ -7,21 +7,31 @@ export const load: PageServerLoad = async ({ parent }) => {
     if (!session?.user?.id) {
         return {
             recommendations: [],
-            isInitializing: false
+            isGenerating: false
         };
     }
 
     try {
-        const recommendations = await getOrCreateRecommendations(session);
+        const userId = session.user.id;
+        const { recommendations, isStale } = await getUserRecommendations(userId);
+
+        if (recommendations.length === 0 || isStale) {
+            startRecommendationGeneration(session);
+
+            return {
+                recommendations: [],
+                isGenerating: true
+            };
+        }
 
         return {
             recommendations,
-            isInitializing: false
+            isGenerating: false
         };
     } catch (error) {
         return {
             recommendations: [],
-            isInitializing: true,
+            isGenerating: false,
             error: error instanceof Error ? error.message : 'Failed to load recommendations'
         };
     }

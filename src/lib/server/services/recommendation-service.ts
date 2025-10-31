@@ -177,6 +177,12 @@ export async function getOrCreateRecommendations(session: Session, forceRefresh 
     return recommendations;
 }
 
+export async function startRecommendationGeneration(session: Session) {
+    generateRecommendations(session).catch(err => {
+        console.error('Background recommendation generation failed:', err);
+    });
+}
+
 function parseJSON<T>(value: string | null, fallback: T): T {
     if (!value) return fallback;
     try {

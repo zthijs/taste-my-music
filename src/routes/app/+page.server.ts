@@ -1,6 +1,5 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getOrCreateUserProfile } from '$lib/server/services/profile-service';
-import { getOrCreateRecommendations } from '$lib/server/services/recommendation-service';
 import { fail } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 
@@ -17,10 +16,14 @@ export const load: PageServerLoad = async ({ parent }) => {
     }
 
     try {
-        const [profile, recommendations] = await Promise.all([
-            getOrCreateUserProfile(session),
-            getOrCreateRecommendations(session)
-        ]);
+        const userId = session.user.id;
+        const profile = await getOrCreateUserProfile(session);
+        const { getUserRecommendations, startRecommendationGeneration } = await import('$lib/server/services/recommendation-service');
+        const { recommendations, isStale } = await getUserRecommendations(userId);
+
+        if (recommendations.length === 0 || isStale) {
+            startRecommendationGeneration(session);
+        }
 
         return {
             profile: profile ? {
@@ -29,6 +32,7 @@ export const load: PageServerLoad = async ({ parent }) => {
                 updatedAt: profile.updatedAt
             } : null,
             recommendations: recommendations.slice(0, 6),
+            isGenerating: recommendations.length === 0 || isStale,
             isInitializing: false,
             isDevelopment: dev
         };
@@ -36,6 +40,7 @@ export const load: PageServerLoad = async ({ parent }) => {
         return {
             profile: null,
             recommendations: [],
+            isGenerating: false,
             isInitializing: true,
             isDevelopment: dev,
             error: error instanceof Error ? error.message : 'Failed to load data'
@@ -75,6 +80,7 @@ export const actions: Actions = {
         }
 
         try {
+            const { getOrCreateRecommendations } = await import('$lib/server/services/recommendation-service');
             await getOrCreateRecommendations(session, true);
             return { success: true };
         } catch (error) {

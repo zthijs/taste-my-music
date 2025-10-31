@@ -4,18 +4,35 @@
 	import { cubicOut } from 'svelte/easing';
 	import IconSparkles from '@tabler/icons-svelte/icons/sparkles';
 	import IconLoader2 from '@tabler/icons-svelte/icons/loader-2';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		title?: string;
 		description?: string;
 		icon?: 'sparkles' | 'loader';
+		messages?: string[];
 	}
 
 	let {
 		title = 'Generating Your Taste Profile',
 		description = 'This can take some time as we analyze your listening history and create personalized recommendations.',
-		icon = 'sparkles'
+		icon = 'sparkles',
+		messages = []
 	}: Props = $props();
+
+	let currentMessageIndex = $state(0);
+
+	onMount(() => {
+		if (messages.length > 0) {
+			const interval = setInterval(() => {
+				currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+			}, 3000);
+
+			return () => clearInterval(interval);
+		}
+	});
+
+	let displayText = $derived(messages.length > 0 ? messages[currentMessageIndex] : description);
 </script>
 
 <div in:fade={{ duration: 400, easing: cubicOut }}>
@@ -35,9 +52,11 @@
 					<h3 class="font-semibold text-lg text-foreground">
 						{title}
 					</h3>
-					<p class="text-sm text-muted-foreground leading-relaxed">
-						{description}
-					</p>
+					{#key currentMessageIndex}
+						<p class="text-sm text-muted-foreground leading-relaxed" in:fade={{ duration: 300 }}>
+							{displayText}
+						</p>
+					{/key}
 				</div>
 			</div>
 		</CardContent>
